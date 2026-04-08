@@ -1,0 +1,209 @@
+'use server';
+import { query } from '@/lib/db';
+import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
+
+export async function getDashboardStats() {
+  const usersCount = await query('SELECT COUNT(*) FROM users');
+  const leadsCount = await query('SELECT COUNT(*) FROM leads');
+  const activeDealsCount = await query("SELECT COUNT(*) FROM deals WHERE stage != 'Islevsiz'");
+  const islevsizCount = await query("SELECT COUNT(*) FROM deals WHERE stage = 'Islevsiz'");
+
+  const recentAssigned = await query(`
+    SELECT d.id, l.full_name as contact_name, l.source as title, d.stage, u.name as user_name
+    FROM deals d 
+    JOIN leads l ON d.lead_id = l.id 
+    JOIN users u ON d.user_id = u.id
+    ORDER BY d.created_at DESC 
+    LIMIT 5
+  `);
+
+  return {
+    agents: usersCount.rows[0].count,
+    totalLeads: leadsCount.rows[0].count,
+    activeDeals: activeDealsCount.rows[0].count,
+    islevsiz: islevsizCount.rows[0].count,
+    recentDeals: recentAssigned.rows
+  };
+}
+
+export async function getRecentUnassignedLeads() {
+  const res = await query("SELECT * FROM leads WHERE status = 'New' ORDER BY created_at DESC LIMIT 5");
+  return res.rows;
+}
+
+export async function getLeads(statusFilter?: string) {
+  let q = 'SELECT l.*, u.name as assigned_agent FROM leads l LEFT JOIN users u ON l.assigned_to = u.id';
+  if (statusFilter) {
+    q += ` WHERE l.status = '${statusFilter}'`;
+  }
+  q += ' ORDER BY l.created_at DESC';
+  const res = await query(q);
+  return res.rows;
+}
+
+export async function getUsers() {
+  const res = await query('SELECT * FROM users ORDER BY name ASC');
+  return res.rows;
+}
+
+export async function assignLeadToUser(leadId: number, userId: number) {
+  // Update lead
+  await query("UPDATE leads SET status = 'Assigned', assigned_to = $1 WHERE id = $2", [userId, leadId]);
+  
+  // Create deal
+  await query("INSERT INTO deals (lead_id, user_id, stage) VALUES ($1, $2, 'Tekrar Aranacak') ON CONFLICT (lead_id) DO NOTHING", [leadId, userId]);
+  
+  revalidatePath('/leads');
+  revalidatePath('/');
+}
+
+export async function getMyDeals(userId?: number) {
+  let q = `
+    SELECT d.id, d.stage, d.notes, l.full_name, l.phone, l.source, u.name as agent_name 
+    FROM deals d 
+    JOIN leads l ON d.lead_id = l.id
+    JOIN users u ON d.user_id = u.id
+    WHERE l.status != 'Not_Qualified'
+  `;
+  if (userId) {
+    q += ` AND d.user_id = ${userId}`;
+  }
+  const res = await query(q);
+  return res.rows;
+}
+
+export async function updateDealStage(dealId: number, newStage: string) {
+  // If moving to Islevsiz, save the current stage so we can restore it later
+  if (newStage === 'Islevsiz') {
+    await query(
+      "UPDATE deals SET previous_stage = stage, stage = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+      [newStage, dealId]
+    );
+    // Mark the lead as Not_Qualified
+    const res = await query("SELECT lead_id FROM deals WHERE id = $1", [dealId]);
+    if (res.rows.length > 0) {
+      await query("UPDATE leads SET status = 'Not_Qualified' WHERE id = $1", [res.rows[0].lead_id]);
+    }
+  } else {
+    await query(
+      "UPDATE deals SET stage = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+      [newStage, dealId]
+    );
+  }
+
+  revalidatePath('/deals');
+}
+
+export async function getDealStages() {
+  const res = await query('SELECT * FROM deal_stages ORDER BY id ASC');
+  return res.rows;
+}
+
+export async function createDealStage(name: string) {
+  const res = await query(
+    'INSERT INTO deal_stages (name) VALUES ($1) ON CONFLICT (name) DO NOTHING RETURNING *',
+    [name]
+  );
+  revalidatePath('/deals');
+  if (res.rows.length === 0) {
+    // Name already exists
+    return null;
+  }
+  return res.rows[0];
+}
+
+export async function updateDealStageName(id: number, name: string) {
+  await query('UPDATE deal_stages SET name = $1 WHERE id = $2', [name, id]);
+  revalidatePath('/deals');
+}
+
+export async function deleteDealStage(id: number) {
+  await query('DELETE FROM deal_stages WHERE id = $1', [id]);
+  revalidatePath('/deals');
+}
+
+export async function revertUnqualifiedLead(leadId: number) {
+  // Get the deal's previous stage
+  const dealRes = await query(
+    "SELECT id, previous_stage FROM deals WHERE lead_id = $1",
+    [leadId]
+  );
+  
+  const deal = dealRes.rows[0];
+  const restoreStage = deal?.previous_stage || 'Tekrar Aranacak';
+  
+  // Restore the lead and the deal stage
+  await query("UPDATE leads SET status = 'Assigned' WHERE id = $1", [leadId]);
+  await query(
+    "UPDATE deals SET stage = $1, previous_stage = NULL, updated_at = CURRENT_TIMESTAMP WHERE lead_id = $2",
+    [restoreStage, leadId]
+  );
+  
+  revalidatePath('/unqualified');
+  revalidatePath('/deals');
+  revalidatePath('/');
+}
+
+export async function importLeads(leads: any[]) {
+  for (const lead of leads) {
+    if (!lead.full_name || !lead.phone) continue;
+    await query(
+      "INSERT INTO leads (full_name, phone, email, source, message, status, profession, city) VALUES ($1, $2, $3, $4, $5, 'New', $6, $7)",
+      [
+          lead.full_name, 
+          lead.phone, 
+          lead.email || '', 
+          lead.source || 'Excel Import', 
+          lead.message || '',
+          lead.profession || '',
+          lead.city || ''
+      ]
+    );
+  }
+  revalidatePath('/leads');
+  revalidatePath('/');
+}
+
+export async function createUser(data: any) {
+  await query(
+    "INSERT INTO users (name, role, email, password) VALUES ($1, $2, $3, $4)",
+    [data.name, data.role, data.email, data.password]
+  );
+  revalidatePath('/settings');
+}
+
+export async function deleteUser(id: number) {
+  // Prevent deleting all admins? Or just delete.
+  await query('DELETE FROM users WHERE id = $1', [id]);
+  revalidatePath('/settings');
+}
+
+export async function login(formData: FormData) {
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+
+  const res = await query('SELECT * FROM users WHERE email = $1 AND password = $2', [email, password]);
+  const user = res.rows[0];
+
+  if (user) {
+    const sessionData = JSON.stringify({ id: user.id, name: user.name, role: user.role });
+    (await cookies()).set('auth_session', sessionData, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60 * 24 * 7, // 1 week
+        path: '/',
+    });
+    return { success: true };
+  }
+
+  return { success: false, error: 'Hatalı email veya şifre.' };
+}
+
+export async function logout() {
+  (await cookies()).delete('auth_session');
+  revalidatePath('/');
+}
+
+
+
