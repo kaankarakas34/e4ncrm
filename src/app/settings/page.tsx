@@ -1,6 +1,8 @@
 import { getUsers } from '../actions';
 import UserManagement from './UserManagement';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SettingsPage() {
   const users = await getUsers();
 

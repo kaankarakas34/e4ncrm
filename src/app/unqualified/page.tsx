@@ -1,6 +1,8 @@
 import { getLeads } from '../actions';
 import UnqualifiedClientView from './UnqualifiedClientView';
 
+export const dynamic = 'force-dynamic';
+
 export default async function UnqualifiedPage() {
   const leads = await getLeads('Not_Qualified');
 

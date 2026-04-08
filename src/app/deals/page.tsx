@@ -1,6 +1,8 @@
 import { getMyDeals, getDealStages } from '../actions';
 import KanbanBoard from './KanbanBoard';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DealsPage() {
   const deals = await getMyDeals();
   const stages = await getDealStages();

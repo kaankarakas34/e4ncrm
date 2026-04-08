@@ -1,4 +1,6 @@
 import { getDashboardStats, getRecentUnassignedLeads } from './actions';
+
+export const dynamic = 'force-dynamic';
 import {
   Users,
   Briefcase,
