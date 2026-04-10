@@ -202,8 +202,8 @@ export async function login(formData: FormData) {
 
 export async function logout() {
   (await cookies()).delete('auth_session');
-  revalidatePath('/');
+  const { redirect } = await import('next/navigation');
+  redirect('/login');
 }
-
 
 

@@ -50,7 +50,14 @@ export default function Sidebar() {
         <Link href="/settings" className="nav-item">
           <Settings size={18} className="nav-icon" /> Settings
         </Link>
-        <button className="nav-item" style={{ width: '100%', border: 'none', background: 'none', color: 'var(--gray-500)' }}>
+        <button 
+          className="nav-item" 
+          style={{ width: '100%', border: 'none', background: 'none', color: 'var(--gray-500)', cursor: 'pointer' }}
+          onClick={async () => {
+             const { logout } = await import('@/app/actions');
+             await logout();
+          }}
+        >
           <LogOut size={18} className="nav-icon" /> Logout
         </button>
       </div>
