@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertOctagon, Phone, Tag, Calendar, RefreshCcw } from 'lucide-react';
-import { revertUnqualifiedLead } from '../actions';
+import { AlertOctagon, Phone, Tag, Calendar, RefreshCcw, Trash2 } from 'lucide-react';
+import { revertUnqualifiedLead, deleteLeads } from '../actions';
 
 export default function UnqualifiedClientView({ leads }: { leads: any[] }) {
   const [items, setItems] = useState(leads);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [revertingId, setRevertingId] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleRevert = async (leadId: number) => {
     setRevertingId(leadId);
@@ -22,15 +24,78 @@ export default function UnqualifiedClientView({ leads }: { leads: any[] }) {
     }
   };
 
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(items.map(i => i.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Seçili ${selectedIds.length} veriyi kalıcı olarak silmek istediğinize emin misiniz?`)) return;
+    
+    setDeleting(true);
+    try {
+      await deleteLeads(selectedIds);
+      setItems(prev => prev.filter(l => !selectedIds.includes(l.id)));
+      setSelectedIds([]);
+    } catch (err) {
+      alert('Silme işlemi başarısız oldu.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Bulk Action Header */}
+      {items.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+             <input 
+               type="checkbox" 
+               checked={selectedIds.length === items.length && items.length > 0}
+               onChange={(e) => handleSelectAll(e.target.checked)}
+               style={{ width: '16px', height: '16px', accentColor: 'var(--red-500)', cursor: 'pointer' }}
+             />
+             <span style={{ fontSize: '13px', fontWeight: 600 }}>Tümünü Seç ({selectedIds.length} seçili)</span>
+          </div>
+          {selectedIds.length > 0 && (
+             <button
+               onClick={handleBulkDelete}
+               disabled={deleting}
+               className="btn btn-primary"
+               style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--red-600)' }}
+             >
+               {deleting ? 'Siliniyor...' : <><Trash2 size={14} /> Seçilenleri Kalıcı Sil</>}
+             </button>
+          )}
+        </div>
+      )}
+
       {items.length === 0 && (
         <p style={{ color: 'var(--gray-600)', fontSize: 13, padding: '24px 0', textAlign: 'center' }}>
           İşlevsiz data bulunmuyor.
         </p>
       )}
       {items.map((lead) => (
-        <div key={lead.id} className="list-row" style={{ padding: '16px', borderBottom: '1px solid var(--border)', cursor: 'default' }}>
+        <div key={lead.id} className="list-row" style={{ padding: '16px', borderBottom: '1px solid var(--border)', cursor: 'default', display: 'flex', gap: '16px', alignItems: 'center', background: selectedIds.includes(lead.id) ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
+          
+          <input 
+             type="checkbox" 
+             checked={selectedIds.includes(lead.id)}
+             onChange={() => handleToggleSelect(lead.id)}
+             style={{ width: '16px', height: '16px', accentColor: 'var(--red-500)', cursor: 'pointer' }}
+          />
+
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
               <div className="avatar" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--gray-600)', color: 'var(--gray-500)' }}>

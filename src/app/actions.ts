@@ -206,4 +206,15 @@ export async function logout() {
   redirect('/login');
 }
 
+export async function deleteLeads(leadIds: number[]) {
+  if (!leadIds || leadIds.length === 0) return;
+  // First delete associated deals to prevent foreign key errors
+  await query('DELETE FROM deals WHERE lead_id = ANY($1::int[])', [leadIds]);
+  // Then delete the leads
+  await query('DELETE FROM leads WHERE id = ANY($1::int[])', [leadIds]);
+  revalidatePath('/leads');
+  revalidatePath('/unqualified');
+  revalidatePath('/');
+}
+
 
