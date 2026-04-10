@@ -4,7 +4,7 @@ const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
 const pool = new Pool({
   connectionString,
-  ssl: connectionString?.includes('supabase.co') 
+  ssl: connectionString?.includes('supabase') 
     ? { rejectUnauthorized: false }
     : false
 });
