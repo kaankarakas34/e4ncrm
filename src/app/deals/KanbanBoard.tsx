@@ -194,7 +194,7 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
           paddingBottom: '24px',
           alignItems: 'start'
         }}>
-        {stages.map(stage => {
+        {stages.filter(stage => stage.name !== 'Islevsiz').map(stage => {
           const stageDeals = deals.filter(d => d.stage === stage.name);
           return (
             <div 
@@ -252,9 +252,10 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
                              maxWidth: '90px'
                            }}
                          >
-                           {stages.map(s => (
+                           {stages.filter(s => s.name !== 'Islevsiz').map(s => (
                              <option key={s.id} value={s.name} style={{ background: '#1a1a1a', color: 'white' }}>{s.name}</option>
                            ))}
+                           <option value="Islevsiz" style={{ background: '#3a0f0f', color: '#ff6b6b' }}>İşlevsiz</option>
                          </select>
                          <div className="avatar" style={{ width: '20px', height: '20px', fontSize: '9px', flexShrink: 0 }}>{(deal.agent_name || 'U')[0]}</div>
                        </div>
