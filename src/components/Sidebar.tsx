@@ -13,6 +13,7 @@ const navItems = [
   { name: 'Dashboard', icon: LayoutDashboard, href: '/' },
   { name: 'Leads',     icon: Briefcase,       href: '/leads' },
   { name: 'Deals (Kanban)', icon: Briefcase,    href: '/deals' },
+  { name: 'Dolu Koltuk', icon: Briefcase, href: '/filled' },
   { name: 'İşlevsiz Data', icon: AlertOctagon, href: '/unqualified' },
 ];
 

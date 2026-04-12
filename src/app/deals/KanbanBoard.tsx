@@ -3,7 +3,8 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateDealStage, createDealStage, updateDealStageName, deleteDealStage } from '../actions';
-import { Plus, Settings2, X, Check, Trash2 } from 'lucide-react';
+import { Plus, Settings2, X, Check, Trash2, Edit2 } from 'lucide-react';
+import DealModal from './DealModal';
 
 export default function KanbanBoard({ initialDeals, initialStages }: { initialDeals: any[], initialStages: any[] }) {
   const router = useRouter();
@@ -19,8 +20,11 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
   const [editingName, setEditingName] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
+  // For Deal Modal
+  const [selectedDeal, setSelectedDeal] = useState<any>(null);
+
   const handleStageChange = async (dealId: number, stageName: string) => {
-    if (stageName === 'Islevsiz') {
+    if (stageName === 'Islevsiz' || stageName === 'Dolu Koltuk') {
       setDeals(deals.filter(d => d.id !== dealId));
     } else {
       setDeals(deals.map(d => d.id === dealId ? { ...d, stage: stageName } : d));
@@ -46,7 +50,6 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
       
       setNewStageName('');
       
-      // Auto-scroll (slide) to the newly created column
       setTimeout(() => {
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTo({
@@ -78,7 +81,6 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
   };
 
   const handleDeleteStage = async (id: number, stageName: string) => {
-    // Check if the stage has any deals
     const stageDeals = deals.filter(d => d.stage === stageName);
     if (stageDeals.length > 0) {
       alert(`"${stageName}" segmentinde ${stageDeals.length} adet lead bulunuyor. Silmek için önce bu lead'leri başka bir segmente taşıyın.`);
@@ -103,7 +105,6 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
       
-      {/* Top Bar: Add Stage & Settings */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
         <form onSubmit={handleAddStage} style={{ display: 'flex', gap: '8px', flex: 1, maxWidth: '400px' }}>
           <input 
@@ -132,7 +133,6 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
         </button>
       </div>
 
-      {/* Settings Panel */}
       {isSettingsOpen && (
         <div className="card" style={{ border: '1px solid var(--red-600)', padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -183,7 +183,6 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
         </div>
       )}
 
-      {/* Kanban Board Container - horizontally scrollable */}
       <div 
         ref={scrollContainerRef}
         style={{ 
@@ -194,7 +193,7 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
           paddingBottom: '24px',
           alignItems: 'start'
         }}>
-        {stages.filter(stage => stage.name !== 'Islevsiz').map(stage => {
+        {stages.filter(stage => stage.name !== 'Islevsiz' && stage.name !== 'Dolu Koltuk').map(stage => {
           const stageDeals = deals.filter(d => d.stage === stage.name);
           return (
             <div 
@@ -221,19 +220,29 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
                 {stageDeals.map(deal => (
                   <div 
                     key={deal.id}
+                    onClick={() => setSelectedDeal(deal)}
                     style={{
                       background: 'var(--bg-elevated)',
                       border: '1px solid var(--border)',
                       borderRadius: 'var(--radius-sm)',
                       padding: '12px',
                       boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      transition: 'border-color 0.2s',
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--red-500)'}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                   >
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{deal.full_name}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{deal.full_name}</div>
+                      <Edit2 size={14} style={{ color: 'var(--gray-500)' }} />
+                    </div>
+                    
                     <div style={{ fontSize: '12px', color: 'var(--gray-500)', marginTop: '4px' }}>{deal.phone}</div>
+                    
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', alignItems: 'center', gap: '8px' }}>
-                       <span style={{ fontSize: '10px', color: 'var(--gray-600)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>{deal.source}</span>
+                       <span style={{ fontSize: '10px', color: 'var(--gray-600)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }}>{deal.source}</span>
                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', minWidth: 0 }}>
                          <select 
                            value={deal.stage}
@@ -248,13 +257,14 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
                              outline: 'none',
                              padding: '3px 4px',
                              cursor: 'pointer',
-                             width: '90px',
+                             width: 'auto',
                              maxWidth: '90px'
                            }}
                          >
-                           {stages.filter(s => s.name !== 'Islevsiz').map(s => (
+                           {stages.filter(s => s.name !== 'Islevsiz' && s.name !== 'Dolu Koltuk').map(s => (
                              <option key={s.id} value={s.name} style={{ background: '#1a1a1a', color: 'white' }}>{s.name}</option>
                            ))}
+                           <option value="Dolu Koltuk" style={{ background: '#3a200f', color: '#ffb16b' }}>Dolu Koltuk</option>
                            <option value="Islevsiz" style={{ background: '#3a0f0f', color: '#ff6b6b' }}>İşlevsiz</option>
                          </select>
                          <div className="avatar" style={{ width: '20px', height: '20px', fontSize: '9px', flexShrink: 0 }}>{(deal.agent_name || 'U')[0]}</div>
@@ -266,10 +276,17 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
             </div>
           );
         })}
-
-        {/* Ending padding to allow scrolling past last column */}
         <div style={{ minWidth: '40px', height: '10px' }} />
       </div>
+
+      <DealModal 
+        deal={selectedDeal} 
+        isOpen={selectedDeal !== null} 
+        onClose={() => setSelectedDeal(null)} 
+        onUpdated={(newNotes) => {
+          setDeals(deals.map(d => d.id === selectedDeal.id ? { ...d, notes: newNotes } : d));
+        }}
+      />
     </div>
   );
 }
