@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { LayoutList, KanbanSquare, Upload, Trash2 } from 'lucide-react';
-import { deleteLeads } from '../actions';
+import { LayoutList, KanbanSquare, Upload, Trash2, Armchair } from 'lucide-react';
+import { deleteLeads, sendLeadsToDoluKoltuk } from '../actions';
 import AssignButton from './AssignButton';
 import LeadImportModal from './LeadImportModal';
 
@@ -12,6 +12,7 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [deleting, setDeleting] = useState(false);
+  const [sendingToFilled, setSendingToFilled] = useState(false);
 
   const handleLeadAssigned = (leadId: number) => {
     setLeads(prev => prev.filter(l => l.id !== leadId));
@@ -48,6 +49,22 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
     }
   };
 
+  const handleBulkSendToFilled = async (ids: number[] = selectedIds) => {
+    if (ids.length === 0) return;
+    if (ids.length > 1 && !confirm(`Seçili ${ids.length} datayı Dolu Koltuk havuzuna göndermek istediğinize emin misiniz?`)) return;
+    
+    setSendingToFilled(true);
+    try {
+      await sendLeadsToDoluKoltuk(ids);
+      setLeads(prev => prev.filter(l => !ids.includes(l.id)));
+      if (ids === selectedIds) setSelectedIds([]);
+    } catch (err) {
+      alert('Gönderme işlemi başarısız oldu.');
+    } finally {
+      setSendingToFilled(false);
+    }
+  };
+
   // Table View Component
   const renderTable = () => (
     <div className="data-table-container fade-up">
@@ -69,7 +86,7 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
             <th>Şehir</th>
             <th>Kaynak</th>
             <th>Tarih</th>
-            <th>Ata (Agent)</th>
+            <th>İşlem Yap</th>
           </tr>
         </thead>
         <tbody>
@@ -95,8 +112,16 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
               <td>{lead.city || '-'}</td>
               <td><span className="badge badge-gray">{lead.source}</span></td>
               <td style={{ color: 'var(--gray-500)' }}>{new Date(lead.created_at).toLocaleDateString()}</td>
-              <td>
+              <td style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <AssignButton leadId={lead.id} users={users} onAssign={() => handleLeadAssigned(lead.id)} />
+                <button 
+                  onClick={() => handleBulkSendToFilled([lead.id])}
+                  disabled={sendingToFilled}
+                  style={{ background: 'var(--orange-600)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
+                  title="Dolu Koltuğa Gönder"
+                >
+                  <Armchair size={13} /> Dolu Koltuk
+                </button>
               </td>
             </tr>
           ))}
@@ -151,7 +176,17 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
               <span className="badge badge-gray">{lead.source}</span>
-              <AssignButton leadId={lead.id} users={users} onAssign={() => handleLeadAssigned(lead.id)} />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => handleBulkSendToFilled([lead.id])}
+                  disabled={sendingToFilled}
+                  style={{ background: 'var(--orange-600)', border: 'none', color: '#fff', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
+                  title="Dolu Koltuğa Gönder"
+                >
+                  <Armchair size={13} />
+                </button>
+                <AssignButton leadId={lead.id} users={users} onAssign={() => handleLeadAssigned(lead.id)} />
+              </div>
             </div>
           </div>
         ))}
@@ -219,14 +254,24 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
               <span style={{ fontSize: '13px', fontWeight: 600 }}>{selectedIds.length} data seçili</span>
            </div>
            
-           <button
-             onClick={handleBulkDelete}
-             disabled={deleting}
-             className="btn btn-primary"
-             style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--red-600)' }}
-           >
-             {deleting ? 'Siliniyor...' : <><Trash2 size={14} /> Seçilenleri Sil</>}
-           </button>
+           <div style={{ display: 'flex', gap: '12px' }}>
+             <button
+               onClick={() => handleBulkSendToFilled(selectedIds)}
+               disabled={sendingToFilled}
+               className="btn btn-primary"
+               style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--orange-600)' }}
+             >
+               {sendingToFilled ? 'Gönderiliyor...' : <><Armchair size={14} /> Seçilenleri Dolu Koltuğa At</>}
+             </button>
+             <button
+               onClick={handleBulkDelete}
+               disabled={deleting}
+               className="btn btn-primary"
+               style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--red-600)' }}
+             >
+               {deleting ? 'Siliniyor...' : <><Trash2 size={14} /> Seçilenleri Sil</>}
+             </button>
+           </div>
          </div>
       )}
 

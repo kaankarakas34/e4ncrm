@@ -260,4 +260,22 @@ export async function deleteLeads(leadIds: number[]) {
   revalidatePath('/');
 }
 
+export async function sendLeadsToDoluKoltuk(leadIds: number[]) {
+  if (!leadIds || leadIds.length === 0) return;
+  
+  // Set leads status to Assigned
+  await query("UPDATE leads SET status = 'Assigned' WHERE id = ANY($1::int[])", [leadIds]);
+  
+  // Create or Update deals for these leads
+  for (const leadId of leadIds) {
+    await query(
+      "INSERT INTO deals (lead_id, stage, previous_stage) VALUES ($1, 'Dolu Koltuk', 'Tekrar Aranacak') ON CONFLICT (lead_id) DO UPDATE SET stage = 'Dolu Koltuk', previous_stage = deals.stage",
+      [leadId]
+    );
+  }
+  
+  revalidatePath('/leads');
+  revalidatePath('/filled');
+}
+
 
