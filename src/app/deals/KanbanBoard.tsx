@@ -102,6 +102,14 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
     }
   };
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredDeals = deals.filter(deal => 
+    (deal.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (deal.phone || '').includes(searchQuery) ||
+    (deal.source?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
       
@@ -127,6 +135,24 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
             {loading ? '...' : <Plus size={18} />}
           </button>
         </form>
+        
+        <div style={{ flex: 1, maxWidth: '300px', display: 'flex', position: 'relative' }}>
+          <input 
+            placeholder="Panoda ara..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              padding: '10px 14px',
+              color: '#fff',
+              fontSize: '13px',
+              outline: 'none'
+            }}
+          />
+        </div>
 
         <button className="btn btn-ghost" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
           <Settings2 size={16} /> Düzenle
@@ -194,7 +220,7 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
           alignItems: 'start'
         }}>
         {stages.filter(stage => stage.name !== 'Islevsiz' && stage.name !== 'Dolu Koltuk' && stage.name !== 'Üye Olanlar').map(stage => {
-          const stageDeals = deals.filter(d => d.stage === stage.name);
+          const stageDeals = filteredDeals.filter(d => d.stage === stage.name);
           return (
             <div 
               key={stage.id}

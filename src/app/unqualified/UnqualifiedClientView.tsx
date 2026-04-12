@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertOctagon, Phone, Tag, Calendar, RefreshCcw, Trash2 } from 'lucide-react';
+import { AlertOctagon, Phone, Tag, Calendar, RefreshCcw, Trash2, Search } from 'lucide-react';
 import { revertUnqualifiedLead, deleteLeads } from '../actions';
 
 export default function UnqualifiedClientView({ leads }: { leads: any[] }) {
@@ -10,6 +10,20 @@ export default function UnqualifiedClientView({ leads }: { leads: any[] }) {
   const [revertingId, setRevertingId] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+
+  const filteredItems = items.filter(lead => 
+    (lead.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
+    (lead.phone || '').includes(searchQuery)
+  ).sort((a, b) => {
+    if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    if (sortBy === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    if (sortBy === 'name_asc') return (a.full_name || '').localeCompare(b.full_name || '');
+    if (sortBy === 'name_desc') return (b.full_name || '').localeCompare(a.full_name || '');
+    return 0;
+  });
 
   const handleRevert = async (leadId: number) => {
     setRevertingId(leadId);
@@ -32,7 +46,7 @@ export default function UnqualifiedClientView({ leads }: { leads: any[] }) {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(items.map(i => i.id));
+      setSelectedIds(filteredItems.map(i => i.id));
     } else {
       setSelectedIds([]);
     }
@@ -56,13 +70,56 @@ export default function UnqualifiedClientView({ leads }: { leads: any[] }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      
+      {/* Search and Sort Toolbar */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-500)' }} />
+          <input 
+            type="text" 
+            placeholder="İsim veya telefon ara..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ 
+              width: '100%', 
+              background: 'var(--bg-surface)', 
+              border: '1px solid var(--border)', 
+              borderRadius: '6px', 
+              padding: '10px 14px 10px 38px', 
+              color: '#fff', 
+              fontSize: '13px',
+              outline: 'none'
+            }}
+          />
+        </div>
+        <select 
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          style={{ 
+            background: 'var(--bg-surface)', 
+            border: '1px solid var(--border)', 
+            borderRadius: '6px', 
+            padding: '10px 14px', 
+            color: '#fff', 
+            fontSize: '13px',
+            outline: 'none',
+            minWidth: '150px'
+          }}
+        >
+          <option value="newest">En Yeniler Önce</option>
+          <option value="oldest">En Eskiler Önce</option>
+          <option value="name_asc">İsim (A-Z)</option>
+          <option value="name_desc">İsim (Z-A)</option>
+        </select>
+      </div>
+
       {/* Bulk Action Header */}
-      {items.length > 0 && (
+      {selectedIds.length > 0 && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
              <input 
                type="checkbox" 
-               checked={selectedIds.length === items.length && items.length > 0}
+               checked={selectedIds.length === filteredItems.length && filteredItems.length > 0}
                onChange={(e) => handleSelectAll(e.target.checked)}
                style={{ width: '16px', height: '16px', accentColor: 'var(--red-500)', cursor: 'pointer' }}
              />
@@ -81,12 +138,12 @@ export default function UnqualifiedClientView({ leads }: { leads: any[] }) {
         </div>
       )}
 
-      {items.length === 0 && (
+      {filteredItems.length === 0 && (
         <p style={{ color: 'var(--gray-600)', fontSize: 13, padding: '24px 0', textAlign: 'center' }}>
           İşlevsiz data bulunmuyor.
         </p>
       )}
-      {items.map((lead) => (
+      {filteredItems.map((lead) => (
         <div key={lead.id} className="list-row" style={{ padding: '16px', borderBottom: '1px solid var(--border)', cursor: 'default', display: 'flex', gap: '16px', alignItems: 'center', background: selectedIds.includes(lead.id) ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
           
           <input 

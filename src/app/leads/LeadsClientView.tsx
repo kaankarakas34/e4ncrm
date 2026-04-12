@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { LayoutList, KanbanSquare, Upload, Trash2, Armchair, Award } from 'lucide-react';
+import { LayoutList, KanbanSquare, Upload, Trash2, Armchair, Award, Search } from 'lucide-react';
 import { deleteLeads, sendLeadsToDoluKoltuk, sendLeadsToMembers } from '../actions';
 import AssignButton from './AssignButton';
 import LeadImportModal from './LeadImportModal';
@@ -14,6 +14,21 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
   const [deleting, setDeleting] = useState(false);
   const [sendingToFilled, setSendingToFilled] = useState(false);
   const [sendingToMembers, setSendingToMembers] = useState(false);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+
+  const filteredLeads = leads.filter(l => 
+    (l.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
+    (l.phone || '').includes(searchQuery) ||
+    (l.profession?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+  ).sort((a, b) => {
+    if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    if (sortBy === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    if (sortBy === 'name_asc') return (a.full_name || '').localeCompare(b.full_name || '');
+    if (sortBy === 'name_desc') return (b.full_name || '').localeCompare(a.full_name || '');
+    return 0;
+  });
 
   const handleLeadAssigned = (leadId: number) => {
     setLeads(prev => prev.filter(l => l.id !== leadId));
@@ -107,12 +122,12 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
           </tr>
         </thead>
         <tbody>
-          {leads.length === 0 && (
+          {filteredLeads.length === 0 && (
             <tr>
-              <td colSpan={9} style={{ textAlign: 'center', padding: '24px' }}>Dağıtım bekleyen data yok.</td>
+              <td colSpan={9} style={{ textAlign: 'center', padding: '24px' }}>Eşleşen data bulunamadı.</td>
             </tr>
           )}
-          {leads.map(lead => (
+          {filteredLeads.map(lead => (
             <tr key={lead.id} style={{ background: selectedIds.includes(lead.id) ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
               <td>
                 <input 
@@ -164,12 +179,12 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
         gap: '16px', 
         alignItems: 'start' 
       }}>
-        {leads.length === 0 && (
+        {filteredLeads.length === 0 && (
           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--gray-500)', gridColumn: '1 / -1' }}>
-            Dağıtım bekleyen data yok.
+            Eşleşen data bulunamadı.
           </div>
         )}
-        {leads.map(lead => (
+        {filteredLeads.map(lead => (
           <div 
             key={lead.id} 
             style={{ 
@@ -270,6 +285,49 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Toolbar: Search and Sort */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-500)' }} />
+          <input 
+            type="text" 
+            placeholder="İsim, telefon veya meslek ara..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ 
+              width: '100%', 
+              background: 'var(--bg-surface)', 
+              border: '1px solid var(--border)', 
+              borderRadius: '6px', 
+              padding: '10px 14px 10px 38px', 
+              color: '#fff', 
+              fontSize: '13px',
+              outline: 'none'
+            }}
+          />
+        </div>
+        
+        <select 
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          style={{ 
+            background: 'var(--bg-surface)', 
+            border: '1px solid var(--border)', 
+            borderRadius: '6px', 
+            padding: '10px 14px', 
+            color: '#fff', 
+            fontSize: '13px',
+            outline: 'none',
+            minWidth: '150px'
+          }}
+        >
+          <option value="newest">En Yeniler Önce</option>
+          <option value="oldest">En Eskiler Önce</option>
+          <option value="name_asc">İsim (A-Z)</option>
+          <option value="name_desc">İsim (Z-A)</option>
+        </select>
       </div>
 
       {/* Bulk Actions Header */}

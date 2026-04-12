@@ -1,12 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Award, Phone, Tag, Calendar, Download, Briefcase } from 'lucide-react';
+import { Award, Phone, Tag, Calendar, Download, Briefcase, Search } from 'lucide-react';
 import { revertMemberDeal } from '../actions';
 
 export default function MembersClientView({ initialDeals, users, currentUser }: { initialDeals: any[], users: any[], currentUser: any }) {
   const [items, setItems] = useState(initialDeals);
   const [revertingId, setRevertingId] = useState<number | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
 
   const handleTakeBack = async (dealId: number) => {
     setRevertingId(dealId);
@@ -20,14 +23,69 @@ export default function MembersClientView({ initialDeals, users, currentUser }: 
     }
   };
 
+  const filteredItems = items.filter(deal => 
+    (deal.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
+    (deal.phone || '').includes(searchQuery) ||
+    (deal.profession?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+  ).sort((a, b) => {
+    if (sortBy === 'newest') return new Date(b.deal_created_at || b.created_at).getTime() - new Date(a.deal_created_at || a.created_at).getTime();
+    if (sortBy === 'oldest') return new Date(a.deal_created_at || a.created_at).getTime() - new Date(b.deal_created_at || b.created_at).getTime();
+    if (sortBy === 'name_asc') return (a.full_name || '').localeCompare(b.full_name || '');
+    if (sortBy === 'name_desc') return (b.full_name || '').localeCompare(a.full_name || '');
+    return 0;
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {items.length === 0 && (
+      
+      {/* Search and Sort Toolbar */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-500)' }} />
+          <input 
+            type="text" 
+            placeholder="İsim, telefon veya meslek ara..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ 
+              width: '100%', 
+              background: 'var(--bg-surface)', 
+              border: '1px solid var(--border)', 
+              borderRadius: '6px', 
+              padding: '10px 14px 10px 38px', 
+              color: '#fff', 
+              fontSize: '13px',
+              outline: 'none'
+            }}
+          />
+        </div>
+        <select 
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          style={{ 
+            background: 'var(--bg-surface)', 
+            border: '1px solid var(--border)', 
+            borderRadius: '6px', 
+            padding: '10px 14px', 
+            color: '#fff', 
+            fontSize: '13px',
+            outline: 'none',
+            minWidth: '150px'
+          }}
+        >
+          <option value="newest">En Yeniler Önce</option>
+          <option value="oldest">En Eskiler Önce</option>
+          <option value="name_asc">İsim (A-Z)</option>
+          <option value="name_desc">İsim (Z-A)</option>
+        </select>
+      </div>
+
+      {filteredItems.length === 0 && (
         <p style={{ color: 'var(--gray-600)', fontSize: 13, padding: '24px 0', textAlign: 'center' }}>
-          Üye olan müşteri kaydı bulunmuyor.
+          Eşleşen data bulunmuyor.
         </p>
       )}
-      {items.map((deal) => (
+      {filteredItems.map((deal) => (
         <div key={deal.id} className="list-row" style={{ padding: '16px', borderBottom: '1px solid var(--border)', cursor: 'default' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
