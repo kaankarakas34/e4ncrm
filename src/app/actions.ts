@@ -329,4 +329,18 @@ export async function sendLeadsToMembers(leadIds: number[]) {
   revalidatePath('/members');
 }
 
-
+export async function sendLeadsToUnqualified(leadIds: number[]) {
+  if (!leadIds || leadIds.length === 0) return;
+  
+  await query("UPDATE leads SET status = 'Not_Qualified' WHERE id = ANY($1::int[])", [leadIds]);
+  
+  for (const leadId of leadIds) {
+    await query(
+      "INSERT INTO deals (lead_id, stage, previous_stage) VALUES ($1, 'Islevsiz', 'Tekrar Aranacak') ON CONFLICT (lead_id) DO UPDATE SET stage = 'Islevsiz', previous_stage = deals.stage",
+      [leadId]
+    );
+  }
+  
+  revalidatePath('/leads');
+  revalidatePath('/unqualified');
+}

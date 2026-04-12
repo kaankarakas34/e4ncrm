@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { LayoutList, KanbanSquare, Upload, Trash2, Armchair, Award, Search } from 'lucide-react';
-import { deleteLeads, sendLeadsToDoluKoltuk, sendLeadsToMembers } from '../actions';
+import { LayoutList, KanbanSquare, Upload, Trash2, Armchair, Award, Search, AlertOctagon } from 'lucide-react';
+import { deleteLeads, sendLeadsToDoluKoltuk, sendLeadsToMembers, sendLeadsToUnqualified } from '../actions';
 import AssignButton from './AssignButton';
 import LeadImportModal from './LeadImportModal';
 
@@ -14,6 +14,7 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
   const [deleting, setDeleting] = useState(false);
   const [sendingToFilled, setSendingToFilled] = useState(false);
   const [sendingToMembers, setSendingToMembers] = useState(false);
+  const [sendingToUnqualified, setSendingToUnqualified] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
@@ -97,6 +98,22 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
     }
   };
 
+  const handleBulkSendToUnqualified = async (ids: number[] = selectedIds) => {
+    if (ids.length === 0) return;
+    if (ids.length > 1 && !confirm(`Seçili ${ids.length} datayı İşlevsiz alanına göndermek istediğinize emin misiniz?`)) return;
+    
+    setSendingToUnqualified(true);
+    try {
+      await sendLeadsToUnqualified(ids);
+      setLeads(prev => prev.filter(l => !ids.includes(l.id)));
+      if (ids === selectedIds) setSelectedIds([]);
+    } catch (err) {
+      alert('Gönderme işlemi başarısız oldu.');
+    } finally {
+      setSendingToUnqualified(false);
+    }
+  };
+
   // Table View Component
   const renderTable = () => (
     <div className="data-table-container fade-up">
@@ -161,6 +178,14 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
                   title="Üye Olanlara At"
                 >
                   <Award size={13} />
+                </button>
+                <button 
+                  onClick={() => handleBulkSendToUnqualified([lead.id])}
+                  disabled={sendingToUnqualified}
+                  style={{ background: 'var(--gray-600)', border: 'none', color: '#fff', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
+                  title="İşlevsize Gönder"
+                >
+                  <AlertOctagon size={13} />
                 </button>
               </td>
             </tr>
@@ -232,6 +257,14 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
                   title="Dolu Koltuğa Gönder"
                 >
                   <Armchair size={13} />
+                </button>
+                <button 
+                  onClick={() => handleBulkSendToUnqualified([lead.id])}
+                  disabled={sendingToUnqualified}
+                  style={{ background: 'var(--gray-600)', border: 'none', color: '#fff', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
+                  title="İşlevsize Gönder"
+                >
+                  <AlertOctagon size={13} />
                 </button>
                 <AssignButton leadId={lead.id} users={users} onAssign={() => handleLeadAssigned(lead.id)} />
               </div>
@@ -361,6 +394,14 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
                style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--orange-600)' }}
              >
                {sendingToFilled ? 'Gönderiliyor...' : <><Armchair size={14} /> Seçilenleri Dolu Koltuğa At</>}
+             </button>
+             <button
+               onClick={() => handleBulkSendToUnqualified(selectedIds)}
+               disabled={sendingToUnqualified}
+               className="btn btn-primary"
+               style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--gray-600)' }}
+             >
+               {sendingToUnqualified ? 'Gönderiliyor...' : <><AlertOctagon size={14} /> Seçilenleri İşlevsize At</>}
              </button>
              <button
                onClick={handleBulkDelete}
