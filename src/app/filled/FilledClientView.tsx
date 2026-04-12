@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Armchair, Phone, Tag, Calendar, Download } from 'lucide-react';
+import { Armchair, Phone, Tag, Calendar, Download, Briefcase } from 'lucide-react';
 import { revertFilledDeal } from '../actions';
 
 export default function FilledClientView({ initialDeals, users, currentUser }: { initialDeals: any[], users: any[], currentUser: any }) {
@@ -39,6 +39,9 @@ export default function FilledClientView({ initialDeals, users, currentUser }: {
                   {deal.full_name}
                 </h3>
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--gray-400)' }}>
+                    <Briefcase size={12} /> {deal.profession || '-'}
+                  </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--gray-400)' }}>
                     <Phone size={12} /> {deal.phone}
                   </span>

@@ -154,7 +154,7 @@ export async function revertUnqualifiedLead(leadId: number) {
 
 export async function getFilledDeals() {
   const q = `
-    SELECT d.id, d.stage, d.notes, d.created_at as deal_created_at, l.id as lead_id, l.full_name, l.phone, l.source, l.created_at, u.name as assigned_agent 
+    SELECT d.id, d.stage, d.notes, d.created_at as deal_created_at, l.id as lead_id, l.full_name, l.phone, l.source, l.profession, l.city, l.created_at, u.name as assigned_agent 
     FROM deals d 
     JOIN leads l ON d.lead_id = l.id
     LEFT JOIN users u ON d.user_id = u.id
@@ -189,7 +189,7 @@ export async function revertFilledDeal(dealId: number, newUserId: number) {
 
 export async function getMembersDeals() {
   const q = `
-    SELECT d.id, d.stage, d.notes, d.created_at as deal_created_at, l.id as lead_id, l.full_name, l.phone, l.source, l.created_at, u.name as assigned_agent 
+    SELECT d.id, d.stage, d.notes, d.created_at as deal_created_at, l.id as lead_id, l.full_name, l.phone, l.source, l.profession, l.city, l.created_at, u.name as assigned_agent 
     FROM deals d 
     JOIN leads l ON d.lead_id = l.id
     LEFT JOIN users u ON d.user_id = u.id
