@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { LayoutList, KanbanSquare, Upload, Trash2, Armchair } from 'lucide-react';
-import { deleteLeads, sendLeadsToDoluKoltuk } from '../actions';
+import { LayoutList, KanbanSquare, Upload, Trash2, Armchair, Award } from 'lucide-react';
+import { deleteLeads, sendLeadsToDoluKoltuk, sendLeadsToMembers } from '../actions';
 import AssignButton from './AssignButton';
 import LeadImportModal from './LeadImportModal';
 
@@ -13,6 +13,7 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [deleting, setDeleting] = useState(false);
   const [sendingToFilled, setSendingToFilled] = useState(false);
+  const [sendingToMembers, setSendingToMembers] = useState(false);
 
   const handleLeadAssigned = (leadId: number) => {
     setLeads(prev => prev.filter(l => l.id !== leadId));
@@ -62,6 +63,22 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
       alert('Gönderme işlemi başarısız oldu.');
     } finally {
       setSendingToFilled(false);
+    }
+  };
+
+  const handleBulkSendToMembers = async (ids: number[] = selectedIds) => {
+    if (ids.length === 0) return;
+    if (ids.length > 1 && !confirm(`Seçili ${ids.length} datayı Üye Olanlar alanına göndermek istediğinize emin misiniz?`)) return;
+    
+    setSendingToMembers(true);
+    try {
+      await sendLeadsToMembers(ids);
+      setLeads(prev => prev.filter(l => !ids.includes(l.id)));
+      if (ids === selectedIds) setSelectedIds([]);
+    } catch (err) {
+      alert('Gönderme işlemi başarısız oldu.');
+    } finally {
+      setSendingToMembers(false);
     }
   };
 
@@ -117,10 +134,18 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
                 <button 
                   onClick={() => handleBulkSendToFilled([lead.id])}
                   disabled={sendingToFilled}
-                  style={{ background: 'var(--orange-600)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
+                  style={{ background: 'var(--orange-600)', border: 'none', color: '#fff', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
                   title="Dolu Koltuğa Gönder"
                 >
-                  <Armchair size={13} /> Dolu Koltuk
+                  <Armchair size={13} />
+                </button>
+                <button 
+                  onClick={() => handleBulkSendToMembers([lead.id])}
+                  disabled={sendingToMembers}
+                  style={{ background: 'var(--blue-600)', border: 'none', color: '#fff', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
+                  title="Üye Olanlara At"
+                >
+                  <Award size={13} />
                 </button>
               </td>
             </tr>
@@ -178,9 +203,17 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
               <span className="badge badge-gray">{lead.source}</span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button 
+                  onClick={() => handleBulkSendToMembers([lead.id])}
+                  disabled={sendingToMembers}
+                  style={{ background: 'var(--blue-600)', border: 'none', color: '#fff', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
+                  title="Üye Olanlara At"
+                >
+                  <Award size={13} />
+                </button>
+                <button 
                   onClick={() => handleBulkSendToFilled([lead.id])}
                   disabled={sendingToFilled}
-                  style={{ background: 'var(--orange-600)', border: 'none', color: '#fff', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
+                  style={{ background: 'var(--orange-600)', border: 'none', color: '#fff', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
                   title="Dolu Koltuğa Gönder"
                 >
                   <Armchair size={13} />
@@ -241,7 +274,7 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
 
       {/* Bulk Actions Header */}
       {selectedIds.length > 0 && (
-         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '16px' }}>
+         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
              {viewMode === 'kanban' && (
                 <input 
@@ -254,7 +287,15 @@ export default function LeadsClientView({ initialLeads, users }: { initialLeads:
               <span style={{ fontSize: '13px', fontWeight: 600 }}>{selectedIds.length} data seçili</span>
            </div>
            
-           <div style={{ display: 'flex', gap: '12px' }}>
+           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+             <button
+               onClick={() => handleBulkSendToMembers(selectedIds)}
+               disabled={sendingToMembers}
+               className="btn btn-primary"
+               style={{ padding: '6px 12px', fontSize: '12px', background: 'var(--blue-600)' }}
+             >
+               {sendingToMembers ? 'Gönderiliyor...' : <><Award size={14} /> Seçilenleri Üye Yap</>}
+             </button>
              <button
                onClick={() => handleBulkSendToFilled(selectedIds)}
                disabled={sendingToFilled}

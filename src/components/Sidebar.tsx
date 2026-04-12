@@ -6,7 +6,8 @@ import {
   Briefcase,
   Settings,
   LogOut,
-  AlertOctagon
+  AlertOctagon,
+  Award
 } from 'lucide-react';
 
 const navItems = [
@@ -14,6 +15,7 @@ const navItems = [
   { name: 'Leads',     icon: Briefcase,       href: '/leads' },
   { name: 'Deals (Kanban)', icon: Briefcase,    href: '/deals' },
   { name: 'Dolu Koltuk', icon: Briefcase, href: '/filled' },
+  { name: 'Üye Olanlar', icon: Award, href: '/members' },
   { name: 'İşlevsiz Data', icon: AlertOctagon, href: '/unqualified' },
 ];
 

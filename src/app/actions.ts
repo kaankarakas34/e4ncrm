@@ -74,8 +74,8 @@ export async function getMyDeals(userId?: number) {
 }
 
 export async function updateDealStage(dealId: number, newStage: string) {
-  // If moving to Islevsiz or Dolu Koltuk, save the current stage so we can restore it later
-  if (newStage === 'Islevsiz' || newStage === 'Dolu Koltuk') {
+  // If moving to Islevsiz, Dolu Koltuk or Üye Olanlar, save the current stage so we can restore it later
+  if (newStage === 'Islevsiz' || newStage === 'Dolu Koltuk' || newStage === 'Üye Olanlar') {
     await query(
       "UPDATE deals SET previous_stage = stage, stage = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
       [newStage, dealId]
@@ -101,7 +101,6 @@ export async function updateDealNotes(dealId: number, notes: string) {
   await query("UPDATE deals SET notes = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", [notes, dealId]);
   revalidatePath('/deals');
 }
-
 
 export async function getDealStages() {
   const res = await query('SELECT * FROM deal_stages ORDER BY id ASC');
@@ -188,6 +187,41 @@ export async function revertFilledDeal(dealId: number, newUserId: number) {
   revalidatePath('/');
 }
 
+export async function getMembersDeals() {
+  const q = `
+    SELECT d.id, d.stage, d.notes, d.created_at as deal_created_at, l.id as lead_id, l.full_name, l.phone, l.source, l.created_at, u.name as assigned_agent 
+    FROM deals d 
+    JOIN leads l ON d.lead_id = l.id
+    LEFT JOIN users u ON d.user_id = u.id
+    WHERE d.stage = 'Üye Olanlar'
+    ORDER BY d.updated_at DESC
+  `;
+  const res = await query(q);
+  return res.rows;
+}
+
+export async function revertMemberDeal(dealId: number, newUserId: number) {
+  const dealRes = await query(
+    "SELECT lead_id, previous_stage FROM deals WHERE id = $1",
+    [dealId]
+  );
+  
+  const deal = dealRes.rows[0];
+  if (!deal) return;
+  
+  const restoreStage = deal?.previous_stage || 'Tekrar Aranacak';
+  
+  await query("UPDATE leads SET assigned_to = $1 WHERE id = $2", [newUserId, deal.lead_id]);
+  await query(
+    "UPDATE deals SET user_id = $1, stage = $2, previous_stage = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $3",
+    [newUserId, restoreStage, dealId]
+  );
+  
+  revalidatePath('/members');
+  revalidatePath('/deals');
+  revalidatePath('/');
+}
+
 export async function importLeads(leads: any[]) {
   for (const lead of leads) {
     if (!lead.full_name || !lead.phone) continue;
@@ -257,6 +291,7 @@ export async function deleteLeads(leadIds: number[]) {
   await query('DELETE FROM leads WHERE id = ANY($1::int[])', [leadIds]);
   revalidatePath('/leads');
   revalidatePath('/unqualified');
+  revalidatePath('/members');
   revalidatePath('/');
 }
 
@@ -276,6 +311,22 @@ export async function sendLeadsToDoluKoltuk(leadIds: number[]) {
   
   revalidatePath('/leads');
   revalidatePath('/filled');
+}
+
+export async function sendLeadsToMembers(leadIds: number[]) {
+  if (!leadIds || leadIds.length === 0) return;
+  
+  await query("UPDATE leads SET status = 'Assigned' WHERE id = ANY($1::int[])", [leadIds]);
+  
+  for (const leadId of leadIds) {
+    await query(
+      "INSERT INTO deals (lead_id, stage, previous_stage) VALUES ($1, 'Üye Olanlar', 'Tekrar Aranacak') ON CONFLICT (lead_id) DO UPDATE SET stage = 'Üye Olanlar', previous_stage = deals.stage",
+      [leadId]
+    );
+  }
+  
+  revalidatePath('/leads');
+  revalidatePath('/members');
 }
 
 

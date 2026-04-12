@@ -24,7 +24,7 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
   const [selectedDeal, setSelectedDeal] = useState<any>(null);
 
   const handleStageChange = async (dealId: number, stageName: string) => {
-    if (stageName === 'Islevsiz' || stageName === 'Dolu Koltuk') {
+    if (stageName === 'Islevsiz' || stageName === 'Dolu Koltuk' || stageName === 'Üye Olanlar') {
       setDeals(deals.filter(d => d.id !== dealId));
     } else {
       setDeals(deals.map(d => d.id === dealId ? { ...d, stage: stageName } : d));
@@ -193,7 +193,7 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
           paddingBottom: '24px',
           alignItems: 'start'
         }}>
-        {stages.filter(stage => stage.name !== 'Islevsiz' && stage.name !== 'Dolu Koltuk').map(stage => {
+        {stages.filter(stage => stage.name !== 'Islevsiz' && stage.name !== 'Dolu Koltuk' && stage.name !== 'Üye Olanlar').map(stage => {
           const stageDeals = deals.filter(d => d.stage === stage.name);
           return (
             <div 
@@ -261,10 +261,11 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
                              maxWidth: '90px'
                            }}
                          >
-                           {stages.filter(s => s.name !== 'Islevsiz' && s.name !== 'Dolu Koltuk').map(s => (
+                           {stages.filter(s => s.name !== 'Islevsiz' && s.name !== 'Dolu Koltuk' && s.name !== 'Üye Olanlar').map(s => (
                              <option key={s.id} value={s.name} style={{ background: '#1a1a1a', color: 'white' }}>{s.name}</option>
                            ))}
                            <option value="Dolu Koltuk" style={{ background: '#3a200f', color: '#ffb16b' }}>Dolu Koltuk</option>
+                           <option value="Üye Olanlar" style={{ background: '#0f203a', color: '#6ba3ff' }}>Üye Olanlar</option>
                            <option value="Islevsiz" style={{ background: '#3a0f0f', color: '#ff6b6b' }}>İşlevsiz</option>
                          </select>
                          <div className="avatar" style={{ width: '20px', height: '20px', fontSize: '9px', flexShrink: 0 }}>{(deal.agent_name || 'U')[0]}</div>
