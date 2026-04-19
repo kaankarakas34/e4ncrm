@@ -41,23 +41,15 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
       const newStage = await createDealStage(newStageName);
       
       if (newStage) {
-        setStages(prev => [...prev, newStage]);
+        window.location.reload();
+        // Return early so we don't try to scroll or set loading false before reload happens
+        return;
       } else {
         alert('Bu isimde bir segment zaten mevcut.');
         setLoading(false);
         return;
       }
-      
-      setNewStageName('');
-      
-      setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({
-            left: scrollContainerRef.current.scrollWidth,
-            behavior: 'smooth'
-          });
-        }
-      }, 100);
+
       
     } catch (err: any) {
       console.error(err);
