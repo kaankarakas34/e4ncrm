@@ -310,8 +310,12 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
         deal={selectedDeal} 
         isOpen={selectedDeal !== null} 
         onClose={() => setSelectedDeal(null)} 
-        onUpdated={(newNotes) => {
-          setDeals(deals.map(d => d.id === selectedDeal.id ? { ...d, notes: newNotes } : d));
+        onUpdated={(newNotes, fetchNeeded) => {
+          if (fetchNeeded) {
+            window.location.reload();
+          } else {
+            setDeals(deals.map(d => d.id === selectedDeal.id ? { ...d, notes: newNotes } : d));
+          }
         }}
       />
     </div>

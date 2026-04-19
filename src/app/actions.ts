@@ -60,7 +60,7 @@ export async function assignLeadToUser(leadId: number, userId: number) {
 
 export async function getMyDeals(userId?: number) {
   let q = `
-    SELECT d.id, d.stage, d.notes, l.full_name, l.phone, l.source, u.name as agent_name 
+    SELECT d.id, d.stage, d.notes, d.user_id, l.full_name, l.phone, l.source, u.name as agent_name 
     FROM deals d 
     JOIN leads l ON d.lead_id = l.id
     JOIN users u ON d.user_id = u.id
@@ -343,4 +343,16 @@ export async function sendLeadsToUnqualified(leadIds: number[]) {
   
   revalidatePath('/leads');
   revalidatePath('/unqualified');
+}
+
+export async function reassignDeal(dealId: number, userId: number) {
+  const dealRes = await query("SELECT lead_id FROM deals WHERE id = $1", [dealId]);
+  const deal = dealRes.rows[0];
+  if (deal && deal.lead_id) {
+    await query("UPDATE leads SET assigned_to = $1 WHERE id = $2", [userId, deal.lead_id]);
+  }
+  await query("UPDATE deals SET user_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", [userId, dealId]);
+  
+  revalidatePath('/deals');
+  revalidatePath('/');
 }

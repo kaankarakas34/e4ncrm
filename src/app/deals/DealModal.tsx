@@ -1,12 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { X, User, Phone, Tag, StickyNote, Save } from 'lucide-react';
-import { updateDealNotes } from '../actions';
+import { useState, useEffect } from 'react';
+import { X, User, Phone, Tag, StickyNote, Save, Users } from 'lucide-react';
+import { updateDealNotes, getUsers, reassignDeal } from '../actions';
 
-export default function DealModal({ deal, isOpen, onClose, onUpdated }: { deal: any, isOpen: boolean, onClose: () => void, onUpdated: (newNotes: string) => void }) {
+export default function DealModal({ deal, isOpen, onClose, onUpdated }: { deal: any, isOpen: boolean, onClose: () => void, onUpdated: (newNotes: string, fetchNeeded?: boolean) => void }) {
   const [notes, setNotes] = useState(deal?.notes || '');
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string>('');
+
+  useEffect(() => {
+    if (deal) {
+      setNotes(deal?.notes || '');
+      setSelectedUser(deal?.user_id?.toString() || '');
+    }
+  }, [deal]);
+
+  useEffect(() => {
+    if (isOpen && users.length === 0) {
+      getUsers().then(setUsers);
+    }
+  }, [isOpen, users.length]);
 
   if (!isOpen || !deal) return null;
 
@@ -14,10 +29,15 @@ export default function DealModal({ deal, isOpen, onClose, onUpdated }: { deal: 
     setLoading(true);
     try {
       await updateDealNotes(deal.id, notes);
-      onUpdated(notes);
+      let fetchNeeded = false;
+      if (selectedUser && selectedUser !== (deal.user_id?.toString() || '')) {
+         await reassignDeal(deal.id, parseInt(selectedUser, 10));
+         fetchNeeded = true;
+      }
+      onUpdated(notes, fetchNeeded);
       onClose();
     } catch (err) {
-      alert('Not kaydedilemedi.');
+      alert('Kaydedilemedi.');
     } finally {
       setLoading(false);
     }
@@ -42,7 +62,7 @@ export default function DealModal({ deal, isOpen, onClose, onUpdated }: { deal: 
 
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', maxHeight: '70vh' }}>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', padding: '16px', borderRadius: '8px' }}>
               <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                 <Phone size={12} /> TELEFON
@@ -55,6 +75,31 @@ export default function DealModal({ deal, isOpen, onClose, onUpdated }: { deal: 
                 <Tag size={12} /> KAYNAK
               </label>
               <div style={{ fontSize: '14px', color: '#fff' }}>{deal.source}</div>
+            </div>
+
+            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', padding: '16px', borderRadius: '8px' }}>
+              <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <Users size={12} /> ATANAN KİŞİ
+              </label>
+              <select
+                value={selectedUser}
+                onChange={e => setSelectedUser(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: 'var(--bg-base)',
+                  border: '1px solid var(--border)',
+                  color: '#fff',
+                  borderRadius: '4px',
+                  padding: '6px 8px',
+                  fontSize: '13px',
+                  outline: 'none'
+                }}
+              >
+                <option value="">Seçiniz</option>
+                {users.map(u => (
+                   <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
             </div>
           </div>
 
