@@ -222,7 +222,40 @@ export async function revertMemberDeal(dealId: number, newUserId: number) {
   revalidatePath('/');
 }
 
-export async function importLeads(leads: any[]) {
+export async function analyzeImportLeads(leads: any[]) {
+  const duplicates = [];
+  const validLeads = [];
+
+  for (const lead of leads) {
+    if (!lead.full_name || !lead.phone) continue;
+
+    let queryStr = "SELECT l.id, l.status, u.name as agent_name FROM leads l LEFT JOIN users u ON l.assigned_to = u.id WHERE l.phone = $1";
+    let queryParams = [lead.phone];
+
+    if (lead.email && lead.email.trim() !== '') {
+      queryStr += " OR l.email = $2";
+      queryParams.push(lead.email);
+    }
+
+    const checkRes = await query(queryStr, queryParams);
+
+    if (checkRes.rows.length > 0) {
+      duplicates.push({
+        imported_name: lead.full_name,
+        imported_phone: lead.phone,
+        imported_email: lead.email,
+        existing_status: checkRes.rows[0].status,
+        agent_name: checkRes.rows[0].agent_name || 'Atanmamış (Dağıtım Havuzunda)'
+      });
+    } else {
+      validLeads.push(lead);
+    }
+  }
+
+  return { duplicates, validLeads };
+}
+
+export async function confirmImportLeads(leads: any[]) {
   for (const lead of leads) {
     if (!lead.full_name || !lead.phone) continue;
     await query(

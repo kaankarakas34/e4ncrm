@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Upload, Check, Users, Phone, Mail, Tag, MapPin, Briefcase, FileSpreadsheet, Download } from 'lucide-react';
-import { importLeads } from '../actions';
+import { X, Upload, Check, Users, Phone, Mail, Tag, MapPin, Briefcase, FileSpreadsheet, Download, AlertOctagon } from 'lucide-react';
+import { analyzeImportLeads, confirmImportLeads } from '../actions';
 import * as XLSX from 'xlsx';
 
 interface ParsedLead {
@@ -24,6 +24,9 @@ export default function LeadImportModal({ isOpen, onClose, onImported }: { isOpe
   
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<ParsedLead[]>([]);
+  
+  const [analysisResult, setAnalysisResult] = useState<{duplicates: any[], validLeads: any[]} | null>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -113,14 +116,35 @@ export default function LeadImportModal({ isOpen, onClose, onImported }: { isOpe
     if (preview.length === 0) return;
     setLoading(true);
     try {
-      await importLeads(preview);
-      onImported();
-      onClose();
-      resetForm();
+      const result = await analyzeImportLeads(preview);
+      if (result.duplicates.length > 0) {
+        setAnalysisResult(result);
+        setShowDuplicateModal(true);
+      } else {
+        await confirmImportLeads(result.validLeads);
+        onImported();
+        onClose();
+        resetForm();
+      }
     } catch (error) {
       alert('Yükleme sırasında hata oluştu.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!analysisResult) return;
+    setLoading(true);
+    try {
+       await confirmImportLeads(analysisResult.validLeads);
+       onImported();
+       onClose();
+       resetForm();
+    } catch (error) {
+       alert('Kalan kayıtlar yüklenemedi.');
+    } finally {
+       setLoading(false);
     }
   };
 
@@ -132,6 +156,8 @@ export default function LeadImportModal({ isOpen, onClose, onImported }: { isOpe
     setCities('');
     setSources('');
     setPreview([]);
+    setAnalysisResult(null);
+    setShowDuplicateModal(false);
   };
 
   return (
@@ -276,6 +302,65 @@ export default function LeadImportModal({ isOpen, onClose, onImported }: { isOpe
           </button>
         </div>
       </div>
+
+      {showDuplicateModal && analysisResult && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="card fade-up" style={{ width: '100%', maxWidth: '800px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 0 }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px', color: 'var(--red-500)' }}>
+                   <AlertOctagon size={24} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--red-500)' }}>Kopya Kayıt Uyarısı!</h2>
+                  <p style={{ fontSize: '13px', color: 'var(--gray-400)', marginTop: '4px' }}>
+                    Yüklemek istediğiniz <strong style={{ color: '#fff' }}>{analysisResult.duplicates.length}</strong> kişi zaten sistemde kayıtlı. Bu kişiler otomatik olarak atlanacaktır.
+                  </p>
+                </div>
+              </div>
+              <X size={20} style={{ cursor: 'pointer', color: 'var(--gray-500)' }} onClick={() => setShowDuplicateModal(false)} />
+            </div>
+
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+              <table className="data-table" style={{ fontSize: '12px' }}>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                  <tr>
+                    <th>Adı Soyadı</th>
+                    <th>Telefon / Mail</th>
+                    <th>Mevcut Durumu</th>
+                    <th>Atanan Kişi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analysisResult.duplicates.map((d, i) => (
+                    <tr key={i}>
+                      <td style={{ fontWeight: 600 }}>{d.imported_name}</td>
+                      <td>
+                         <div>{d.imported_phone}</div>
+                         <div style={{ color: 'var(--gray-500)', fontSize: '11px' }}>{d.imported_email}</div>
+                      </td>
+                      <td><span className="badge badge-gray">{d.existing_status}</span></td>
+                      <td style={{ color: 'var(--red-400)' }}>{d.agent_name}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)' }}>
+              <span style={{ fontSize: '13px', color: 'var(--gray-400)' }}>
+                 Geriye kalan <strong style={{ color: '#fff' }}>{analysisResult.validLeads.length}</strong> yeni kayıt sisteme eklensin mi?
+              </span>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                 <button className="btn btn-ghost" onClick={() => setShowDuplicateModal(false)} disabled={loading}>İptal Et</button>
+                 <button className="btn btn-primary" onClick={handleConfirmImport} disabled={loading}>
+                   {loading ? 'Yükleniyor...' : 'Evet, Kalanları Yükle'}
+                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
