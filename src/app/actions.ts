@@ -60,7 +60,7 @@ export async function assignLeadToUser(leadId: number, userId: number) {
 
 export async function getMyDeals(userId?: number) {
   let q = `
-    SELECT d.id, d.stage, d.notes, d.user_id, l.full_name, l.phone, l.source, u.name as agent_name 
+    SELECT d.id, d.stage, d.notes, d.user_id, l.full_name, l.phone, l.source, l.profession, l.city, u.name as agent_name 
     FROM deals d 
     JOIN leads l ON d.lead_id = l.id
     JOIN users u ON d.user_id = u.id

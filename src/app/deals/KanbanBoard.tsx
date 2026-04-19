@@ -257,7 +257,14 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
                       <Edit2 size={14} style={{ color: 'var(--gray-500)' }} />
                     </div>
                     
-                    <div style={{ fontSize: '12px', color: 'var(--gray-500)', marginTop: '4px' }}>{deal.phone}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                       <div style={{ fontSize: '12px', color: 'var(--gray-500)' }}>{deal.phone}</div>
+                       {deal.profession && (
+                         <div style={{ fontSize: '11px', color: 'var(--gray-400)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
+                           {deal.profession}
+                         </div>
+                       )}
+                    </div>
                     
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', alignItems: 'center', gap: '8px' }}>
                        <span style={{ fontSize: '10px', color: 'var(--gray-600)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }}>{deal.source}</span>

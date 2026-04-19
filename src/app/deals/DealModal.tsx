@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, User, Phone, Tag, StickyNote, Save, Users } from 'lucide-react';
+import { X, User, Phone, Tag, StickyNote, Save, Users, Briefcase } from 'lucide-react';
 import { updateDealNotes, getUsers, reassignDeal } from '../actions';
 
 export default function DealModal({ deal, isOpen, onClose, onUpdated }: { deal: any, isOpen: boolean, onClose: () => void, onUpdated: (newNotes: string, fetchNeeded?: boolean) => void }) {
@@ -44,7 +44,7 @@ export default function DealModal({ deal, isOpen, onClose, onUpdated }: { deal: 
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '60px 20px 20px', backdropFilter: 'blur(4px)', overflowY: 'auto' }}>
       <div className="card fade-up" style={{ width: '100%', maxWidth: '600px', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', border: '1px solid var(--border)' }}>
         
         <div style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)' }}>
@@ -62,7 +62,13 @@ export default function DealModal({ deal, isOpen, onClose, onUpdated }: { deal: 
 
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', maxHeight: '70vh' }}>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px' }}>
+            <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', padding: '16px', borderRadius: '8px' }}>
+              <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <Briefcase size={12} /> MESLEK
+              </label>
+              <div style={{ fontSize: '14px', color: '#fff' }}>{deal.profession || '-'}</div>
+            </div>
             <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', padding: '16px', borderRadius: '8px' }}>
               <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                 <Phone size={12} /> TELEFON
