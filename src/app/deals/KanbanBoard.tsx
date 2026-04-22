@@ -2,11 +2,12 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateDealStage, createDealStage, updateDealStageName, deleteDealStage } from '../actions';
-import { Plus, Settings2, X, Check, Trash2, Edit2 } from 'lucide-react';
+import { updateDealStage, createDealStage, updateDealStageName, deleteDealStage, exportAdminDeals } from '../actions';
+import { Plus, Settings2, X, Check, Trash2, Edit2, Download } from 'lucide-react';
 import DealModal from './DealModal';
+import * as XLSX from 'xlsx';
 
-export default function KanbanBoard({ initialDeals, initialStages }: { initialDeals: any[], initialStages: any[] }) {
+export default function KanbanBoard({ initialDeals, initialStages, isAdmin }: { initialDeals: any[], initialStages: any[], isAdmin?: boolean }) {
   const router = useRouter();
   const [deals, setDeals] = useState(initialDeals);
   const [stages, setStages] = useState(initialStages);
@@ -94,6 +95,26 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
     }
   };
 
+  const handleExportMails = async () => {
+    setLoading(true);
+    try {
+      const data = await exportAdminDeals();
+      if (data && data.length > 0) {
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Veriler");
+        XLSX.writeFile(wb, "Olumlu_TekrarAranacak_Export.xlsx");
+      } else {
+        alert("Bu segmentlerde herhangi bir veri bulunamadı.");
+      }
+    } catch (e) {
+      alert("Dışa aktarma sırasında bir hata oluştu.");
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredDeals = deals.filter(deal => 
@@ -146,9 +167,16 @@ export default function KanbanBoard({ initialDeals, initialStages }: { initialDe
           />
         </div>
 
-        <button className="btn btn-ghost" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
-          <Settings2 size={16} /> Düzenle
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {isAdmin && (
+            <button className="btn btn-ghost" onClick={handleExportMails} disabled={loading} style={{ color: 'var(--green-400)', borderColor: 'var(--green-500)' }}>
+              <Download size={16} /> Mailleri İçeren Excel'i İndir
+            </button>
+          )}
+          <button className="btn btn-ghost" onClick={() => setIsSettingsOpen(!isSettingsOpen)}>
+            <Settings2 size={16} /> Düzenle
+          </button>
+        </div>
       </div>
 
       {isSettingsOpen && (

@@ -362,6 +362,23 @@ export async function sendLeadsToMembers(leadIds: number[]) {
   revalidatePath('/members');
 }
 
+export async function exportAdminDeals() {
+  const q = `
+    SELECT 
+      l.full_name as "Ad Soyad",
+      l.email as "E-Mail",
+      l.phone as "Telefon",
+      d.stage as "Segment",
+      u.name as "Atanan Danışman"
+    FROM deals d 
+    JOIN leads l ON d.lead_id = l.id
+    JOIN users u ON d.user_id = u.id
+    WHERE d.stage IN ('Olumlu', 'Tekrar Aranacak')
+  `;
+  const res = await query(q);
+  return res.rows;
+}
+
 export async function sendLeadsToUnqualified(leadIds: number[]) {
   if (!leadIds || leadIds.length === 0) return;
   

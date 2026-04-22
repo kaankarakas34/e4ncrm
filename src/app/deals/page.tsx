@@ -24,7 +24,7 @@ export default async function DealsPage() {
         <h1 className="page-title">Fırsatlar (Kanban)</h1>
         <p className="page-subtitle">Atanmış lead'lerin yönetim ve takip alanı.</p>
       </div>
-      <KanbanBoard initialDeals={deals} initialStages={stages} />
+      <KanbanBoard initialDeals={deals} initialStages={stages} isAdmin={user?.role === 'admin'} />
     </div>
   );
 }
