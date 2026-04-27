@@ -60,7 +60,7 @@ export async function assignLeadToUser(leadId: number, userId: number) {
 
 export async function getMyDeals(userId?: number) {
   let q = `
-    SELECT d.id, d.stage, d.notes, d.user_id, l.full_name, l.phone, l.source, l.profession, l.city, u.name as agent_name 
+    SELECT d.id, d.stage, d.notes, d.user_id, l.full_name, l.email, l.phone, l.source, l.profession, l.city, l.message, l.created_at, u.name as agent_name 
     FROM deals d 
     JOIN leads l ON d.lead_id = l.id
     JOIN users u ON d.user_id = u.id
@@ -405,4 +405,28 @@ export async function reassignDeal(dealId: number, userId: number) {
   
   revalidatePath('/deals');
   revalidatePath('/');
+}
+
+export async function searchAllDeals(searchTerm: string) {
+  if (!searchTerm || searchTerm.trim().length < 2) return [];
+
+  const q = `
+    SELECT d.id, d.stage, d.notes, d.user_id, l.full_name, l.email, l.phone, l.source, l.profession, l.city, l.message, l.created_at, u.name as agent_name 
+    FROM deals d 
+    JOIN leads l ON d.lead_id = l.id
+    JOIN users u ON d.user_id = u.id
+    WHERE l.status != 'Not_Qualified'
+    AND (
+      l.full_name ILIKE $1 OR 
+      l.phone ILIKE $1 OR 
+      l.email ILIKE $1 OR
+      l.source ILIKE $1 OR
+      l.profession ILIKE $1 OR
+      u.name ILIKE $1
+    )
+    ORDER BY d.updated_at DESC
+    LIMIT 50
+  `;
+  const res = await query(q, [`%${searchTerm}%`]);
+  return res.rows;
 }

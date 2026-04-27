@@ -2,8 +2,8 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateDealStage, createDealStage, updateDealStageName, deleteDealStage, exportAdminDeals } from '../actions';
-import { Plus, Settings2, X, Check, Trash2, Edit2, Download } from 'lucide-react';
+import { updateDealStage, createDealStage, updateDealStageName, deleteDealStage, exportAdminDeals, searchAllDeals } from '../actions';
+import { Plus, Settings2, X, Check, Trash2, Edit2, Download, Search, Globe, Loader2 } from 'lucide-react';
 import DealModal from './DealModal';
 import * as XLSX from 'xlsx';
 
@@ -23,6 +23,27 @@ export default function KanbanBoard({ initialDeals, initialStages, isAdmin }: { 
 
   // For Deal Modal
   const [selectedDeal, setSelectedDeal] = useState<any>(null);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const [globalResults, setGlobalResults] = useState<any[]>([]);
+  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+
+  const handleGlobalSearch = async (val: string) => {
+    setGlobalSearchQuery(val);
+    if (val.trim().length < 2) {
+      setGlobalResults([]);
+      return;
+    }
+
+    setIsSearchingGlobal(true);
+    try {
+      const results = await searchAllDeals(val);
+      setGlobalResults(results);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearchingGlobal(false);
+    }
+  };
 
   const handleStageChange = async (dealId: number, stageName: string) => {
     if (stageName === 'Islevsiz' || stageName === 'Dolu Koltuk' || stageName === 'Üye Olanlar') {
@@ -120,6 +141,8 @@ export default function KanbanBoard({ initialDeals, initialStages, isAdmin }: { 
   const filteredDeals = deals.filter(deal => 
     (deal.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (deal.phone || '').includes(searchQuery) ||
+    (deal.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (deal.profession?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (deal.source?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
 
@@ -150,6 +173,7 @@ export default function KanbanBoard({ initialDeals, initialStages, isAdmin }: { 
         </form>
         
         <div style={{ flex: 1, maxWidth: '300px', display: 'flex', position: 'relative' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-500)' }} />
           <input 
             placeholder="Panoda ara..."
             value={searchQuery}
@@ -159,12 +183,88 @@ export default function KanbanBoard({ initialDeals, initialStages, isAdmin }: { 
               background: 'var(--bg-surface)',
               border: '1px solid var(--border)',
               borderRadius: '6px',
-              padding: '10px 14px',
+              padding: '10px 14px 10px 38px',
               color: '#fff',
               fontSize: '13px',
               outline: 'none'
             }}
           />
+        </div>
+
+        <div style={{ flex: 1, maxWidth: '350px', display: 'flex', position: 'relative' }}>
+          <Globe size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--blue-400)' }} />
+          <input 
+            placeholder="Tüm CRM'de ara..."
+            value={globalSearchQuery}
+            onChange={(e) => handleGlobalSearch(e.target.value)}
+            style={{
+              width: '100%',
+              background: 'rgba(59, 130, 246, 0.05)',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              borderRadius: '6px',
+              padding: '10px 14px 10px 38px',
+              color: '#fff',
+              fontSize: '13px',
+              outline: 'none'
+            }}
+          />
+          {isSearchingGlobal && (
+            <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', display: 'flex' }}>
+              <Loader2 size={16} className="animate-spin" style={{ color: 'var(--blue-400)' }} />
+            </div>
+          )}
+          
+          {globalResults.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              marginTop: '8px',
+              zIndex: 100,
+              maxHeight: '400px',
+              overflowY: 'auto',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+              padding: '8px'
+            }}>
+              <div style={{ fontSize: '11px', color: 'var(--gray-500)', padding: '4px 8px', borderBottom: '1px solid var(--border)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Global Sonuçlar</span>
+                <span style={{ cursor: 'pointer', color: 'var(--red-400)' }} onClick={() => setGlobalResults([])}>Kapat</span>
+              </div>
+              {globalResults.map(res => (
+                <div 
+                  key={res.id} 
+                  onClick={() => {
+                    setSelectedDeal(res);
+                    setGlobalResults([]);
+                    setGlobalSearchQuery('');
+                  }}
+                  style={{
+                    padding: '10px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                    borderBottom: '1px solid rgba(255,255,255,0.03)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600 }}>{res.full_name}</div>
+                    <span className="badge badge-gray" style={{ fontSize: '10px' }}>{res.stage}</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--gray-400)', marginTop: '2px' }}>{res.phone} | {res.source}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                    <div className="avatar" style={{ width: '16px', height: '16px', fontSize: '8px' }}>{(res.agent_name || 'U')[0]}</div>
+                    <span style={{ fontSize: '11px', color: 'var(--blue-400)' }}>{res.agent_name}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
