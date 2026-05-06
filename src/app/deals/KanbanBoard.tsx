@@ -339,7 +339,14 @@ export default function KanbanBoard({ initialDeals, initialStages, isAdmin }: { 
           paddingBottom: '24px',
           alignItems: 'start'
         }}>
-        {stages.filter(stage => stage.name !== 'Islevsiz' && stage.name !== 'Dolu Koltuk' && stage.name !== 'Üye Olanlar').map(stage => {
+        {stages
+          .filter(stage => stage.name !== 'Islevsiz' && stage.name !== 'Dolu Koltuk' && stage.name !== 'Üye Olanlar')
+          .sort((a, b) => {
+            if (a.name === 'Yeni Data') return -1;
+            if (b.name === 'Yeni Data') return 1;
+            return 0;
+          })
+          .map(stage => {
           const stageDeals = filteredDeals.filter(d => d.stage === stage.name);
           return (
             <div 
@@ -414,7 +421,14 @@ export default function KanbanBoard({ initialDeals, initialStages, isAdmin }: { 
                              maxWidth: '90px'
                            }}
                          >
-                           {stages.filter(s => s.name !== 'Islevsiz' && s.name !== 'Dolu Koltuk' && s.name !== 'Üye Olanlar').map(s => (
+                           {stages
+                             .filter(s => s.name !== 'Islevsiz' && s.name !== 'Dolu Koltuk' && s.name !== 'Üye Olanlar')
+                             .sort((a, b) => {
+                               if (a.name === 'Yeni Data') return -1;
+                               if (b.name === 'Yeni Data') return 1;
+                               return 0;
+                             })
+                             .map(s => (
                              <option key={s.id} value={s.name} style={{ background: '#1a1a1a', color: 'white' }}>{s.name}</option>
                            ))}
                            <option value="Dolu Koltuk" style={{ background: '#3a200f', color: '#ffb16b' }}>Dolu Koltuk</option>

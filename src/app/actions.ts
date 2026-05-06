@@ -52,7 +52,7 @@ export async function assignLeadToUser(leadId: number, userId: number) {
   await query("UPDATE leads SET status = 'Assigned', assigned_to = $1 WHERE id = $2", [userId, leadId]);
   
   // Create deal
-  await query("INSERT INTO deals (lead_id, user_id, stage) VALUES ($1, $2, 'Tekrar Aranacak') ON CONFLICT (lead_id) DO NOTHING", [leadId, userId]);
+  await query("INSERT INTO deals (lead_id, user_id, stage) VALUES ($1, $2, 'Yeni Data') ON CONFLICT (lead_id) DO NOTHING", [leadId, userId]);
   
   revalidatePath('/leads');
   revalidatePath('/');
@@ -69,6 +69,7 @@ export async function getMyDeals(userId?: number) {
   if (userId) {
     q += ` AND d.user_id = ${userId}`;
   }
+  q += ' ORDER BY l.created_at DESC';
   const res = await query(q);
   return res.rows;
 }
@@ -104,7 +105,23 @@ export async function updateDealNotes(dealId: number, notes: string) {
 
 export async function getDealStages() {
   const res = await query('SELECT * FROM deal_stages ORDER BY id ASC');
-  return res.rows;
+  let stages = res.rows;
+  
+  // Ensure 'Yeni Data' exists in the list
+  if (!stages.some(s => s.name === 'Yeni Data')) {
+    // We don't want to insert here every time, but for the first time it helps.
+    // Or just manually add it to the array for now.
+    // Better: let's insert it if it's missing.
+    try {
+      await query("INSERT INTO deal_stages (name) VALUES ('Yeni Data') ON CONFLICT (name) DO NOTHING");
+      const updatedRes = await query('SELECT * FROM deal_stages ORDER BY id ASC');
+      stages = updatedRes.rows;
+    } catch (e) {
+      console.error('Error ensuring Yeni Data stage:', e);
+    }
+  }
+  
+  return stages;
 }
 
 export async function createDealStage(name: string) {
@@ -159,7 +176,7 @@ export async function getFilledDeals() {
     JOIN leads l ON d.lead_id = l.id
     LEFT JOIN users u ON d.user_id = u.id
     WHERE d.stage = 'Dolu Koltuk'
-    ORDER BY d.updated_at DESC
+    ORDER BY l.created_at DESC
   `;
   const res = await query(q);
   return res.rows;
@@ -194,7 +211,7 @@ export async function getMembersDeals() {
     JOIN leads l ON d.lead_id = l.id
     LEFT JOIN users u ON d.user_id = u.id
     WHERE d.stage = 'Üye Olanlar'
-    ORDER BY d.updated_at DESC
+    ORDER BY l.created_at DESC
   `;
   const res = await query(q);
   return res.rows;
