@@ -171,12 +171,12 @@ export async function revertUnqualifiedLead(leadId: number) {
 
 export async function getFilledDeals() {
   const q = `
-    SELECT d.id, d.stage, d.notes, d.created_at as deal_created_at, l.id as lead_id, l.full_name, l.phone, l.source, l.profession, l.city, l.created_at, u.name as assigned_agent 
+    SELECT d.id, d.stage, d.notes, d.created_at as deal_created_at, d.updated_at as deal_updated_at, l.id as lead_id, l.full_name, l.phone, l.source, l.profession, l.city, l.created_at, u.name as assigned_agent 
     FROM deals d 
     JOIN leads l ON d.lead_id = l.id
     LEFT JOIN users u ON d.user_id = u.id
     WHERE d.stage = 'Dolu Koltuk'
-    ORDER BY l.created_at DESC
+    ORDER BY d.updated_at DESC
   `;
   const res = await query(q);
   return res.rows;
@@ -354,7 +354,7 @@ export async function sendLeadsToDoluKoltuk(leadIds: number[]) {
   // Create or Update deals for these leads
   for (const leadId of leadIds) {
     await query(
-      "INSERT INTO deals (lead_id, stage, previous_stage) VALUES ($1, 'Dolu Koltuk', 'Tekrar Aranacak') ON CONFLICT (lead_id) DO UPDATE SET stage = 'Dolu Koltuk', previous_stage = deals.stage",
+      "INSERT INTO deals (lead_id, stage, previous_stage) VALUES ($1, 'Dolu Koltuk', 'Tekrar Aranacak') ON CONFLICT (lead_id) DO UPDATE SET stage = 'Dolu Koltuk', previous_stage = deals.stage, updated_at = CURRENT_TIMESTAMP",
       [leadId]
     );
   }
@@ -370,7 +370,7 @@ export async function sendLeadsToMembers(leadIds: number[]) {
   
   for (const leadId of leadIds) {
     await query(
-      "INSERT INTO deals (lead_id, stage, previous_stage) VALUES ($1, 'Üye Olanlar', 'Tekrar Aranacak') ON CONFLICT (lead_id) DO UPDATE SET stage = 'Üye Olanlar', previous_stage = deals.stage",
+      "INSERT INTO deals (lead_id, stage, previous_stage) VALUES ($1, 'Üye Olanlar', 'Tekrar Aranacak') ON CONFLICT (lead_id) DO UPDATE SET stage = 'Üye Olanlar', previous_stage = deals.stage, updated_at = CURRENT_TIMESTAMP",
       [leadId]
     );
   }
@@ -403,7 +403,7 @@ export async function sendLeadsToUnqualified(leadIds: number[]) {
   
   for (const leadId of leadIds) {
     await query(
-      "INSERT INTO deals (lead_id, stage, previous_stage) VALUES ($1, 'Islevsiz', 'Tekrar Aranacak') ON CONFLICT (lead_id) DO UPDATE SET stage = 'Islevsiz', previous_stage = deals.stage",
+      "INSERT INTO deals (lead_id, stage, previous_stage) VALUES ($1, 'Islevsiz', 'Tekrar Aranacak') ON CONFLICT (lead_id) DO UPDATE SET stage = 'Islevsiz', previous_stage = deals.stage, updated_at = CURRENT_TIMESTAMP",
       [leadId]
     );
   }
