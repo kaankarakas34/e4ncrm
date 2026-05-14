@@ -28,8 +28,8 @@ export default function FilledClientView({ initialDeals, users, currentUser }: {
     (deal.phone || '').includes(searchQuery) ||
     (deal.profession?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   ).sort((a, b) => {
-    const dateA = new Date(a.deal_updated_at || a.deal_created_at || a.created_at).getTime();
-    const dateB = new Date(b.deal_updated_at || b.deal_created_at || b.created_at).getTime();
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
     if (sortBy === 'newest') return dateB - dateA;
     if (sortBy === 'oldest') return dateA - dateB;
     if (sortBy === 'name_asc') return (a.full_name || '').localeCompare(b.full_name || '');
@@ -108,8 +108,8 @@ export default function FilledClientView({ initialDeals, users, currentUser }: {
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--gray-500)' }}>
                     <Tag size={12} /> Eski Sahibi: {deal.assigned_agent || '-'}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--orange-400)' }}>
-                    <Calendar size={12} /> Eklenme: {deal.deal_updated_at ? new Date(deal.deal_updated_at).toLocaleDateString('tr-TR') : (deal.created_at ? new Date(deal.created_at).toLocaleDateString('tr-TR') : '-')}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--gray-500)' }}>
+                    <Calendar size={12} /> Eklenme: {deal.created_at ? new Date(deal.created_at).toLocaleDateString('tr-TR') : '-'}
                   </span>
                 </div>
                 {deal.notes && (

@@ -176,7 +176,7 @@ export async function getFilledDeals() {
     JOIN leads l ON d.lead_id = l.id
     LEFT JOIN users u ON d.user_id = u.id
     WHERE d.stage = 'Dolu Koltuk'
-    ORDER BY d.updated_at DESC
+    ORDER BY l.created_at DESC
   `;
   const res = await query(q);
   return res.rows;
