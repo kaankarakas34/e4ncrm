@@ -447,3 +447,115 @@ export async function searchAllDeals(searchTerm: string) {
   const res = await query(q, [`%${searchTerm}%`]);
   return res.rows;
 }
+
+export async function getAllCrmDataExport() {
+  // 1. Aday Havuzu (Atanmamış Leads)
+  const newLeads = await query(`
+    SELECT 
+      l.full_name as "Ad Soyad",
+      l.phone as "Telefon",
+      l.email as "E-Mail",
+      l.profession as "Meslek",
+      l.city as "Şehir",
+      l.source as "Kaynak",
+      l.message as "Mesaj",
+      TO_CHAR(l.created_at, 'DD.MM.YYYY HH24:MI') as "Oluşturulma Tarihi"
+    FROM leads l
+    WHERE l.status = 'New'
+    ORDER BY l.created_at DESC
+  `);
+
+  // 2. Tüm Aktif Fırsatlar (Deals)
+  const activeDeals = await query(`
+    SELECT 
+      l.full_name as "Ad Soyad",
+      l.phone as "Telefon",
+      l.email as "E-Mail",
+      l.profession as "Meslek",
+      l.city as "Şehir",
+      l.source as "Kaynak",
+      l.message as "Mesaj",
+      COALESCE(u.name, 'Atanmamış') as "Atanan Danışman",
+      d.stage as "Segment",
+      d.notes as "Notlar",
+      TO_CHAR(d.created_at, 'DD.MM.YYYY HH24:MI') as "Fırsat Eklenme Tarihi",
+      TO_CHAR(d.updated_at, 'DD.MM.YYYY HH24:MI') as "Son Güncelleme"
+    FROM deals d
+    JOIN leads l ON d.lead_id = l.id
+    LEFT JOIN users u ON d.user_id = u.id
+    WHERE d.stage NOT IN ('Dolu Koltuk', 'Üye Olanlar', 'Islevsiz')
+    ORDER BY d.updated_at DESC
+  `);
+
+  // 3. Dolu Koltuk
+  const doluKoltuk = await query(`
+    SELECT 
+      l.full_name as "Ad Soyad",
+      l.phone as "Telefon",
+      l.email as "E-Mail",
+      l.profession as "Meslek",
+      l.city as "Şehir",
+      l.source as "Kaynak",
+      l.message as "Mesaj",
+      COALESCE(u.name, 'Atanmamış') as "Atanan Danışman",
+      d.notes as "Notlar",
+      TO_CHAR(d.created_at, 'DD.MM.YYYY HH24:MI') as "Fırsat Eklenme Tarihi",
+      TO_CHAR(d.updated_at, 'DD.MM.YYYY HH24:MI') as "Son Güncelleme"
+    FROM deals d
+    JOIN leads l ON d.lead_id = l.id
+    LEFT JOIN users u ON d.user_id = u.id
+    WHERE d.stage = 'Dolu Koltuk'
+    ORDER BY d.updated_at DESC
+  `);
+
+  // 4. Üye Olanlar
+  const uyeOlanlar = await query(`
+    SELECT 
+      l.full_name as "Ad Soyad",
+      l.phone as "Telefon",
+      l.email as "E-Mail",
+      l.profession as "Meslek",
+      l.city as "Şehir",
+      l.source as "Kaynak",
+      l.message as "Mesaj",
+      COALESCE(u.name, 'Atanmamış') as "Atanan Danışman",
+      d.notes as "Notlar",
+      TO_CHAR(d.created_at, 'DD.MM.YYYY HH24:MI') as "Fırsat Eklenme Tarihi",
+      TO_CHAR(d.updated_at, 'DD.MM.YYYY HH24:MI') as "Son Güncelleme"
+    FROM deals d
+    JOIN leads l ON d.lead_id = l.id
+    LEFT JOIN users u ON d.user_id = u.id
+    WHERE d.stage = 'Üye Olanlar'
+    ORDER BY d.updated_at DESC
+  `);
+
+  // 5. İşlevsiz Data
+  const islevsiz = await query(`
+    SELECT 
+      l.full_name as "Ad Soyad",
+      l.phone as "Telefon",
+      l.email as "E-Mail",
+      l.profession as "Meslek",
+      l.city as "Şehir",
+      l.source as "Kaynak",
+      l.message as "Mesaj",
+      COALESCE(u.name, 'Atanmamış') as "Atanan Danışman",
+      COALESCE(d.previous_stage, '-') as "Önceki Segment",
+      d.notes as "Notlar",
+      TO_CHAR(d.created_at, 'DD.MM.YYYY HH24:MI') as "Fırsat Eklenme Tarihi",
+      TO_CHAR(d.updated_at, 'DD.MM.YYYY HH24:MI') as "Son Güncelleme"
+    FROM deals d
+    JOIN leads l ON d.lead_id = l.id
+    LEFT JOIN users u ON d.user_id = u.id
+    WHERE d.stage = 'Islevsiz'
+    ORDER BY d.updated_at DESC
+  `);
+
+  return {
+    newLeads: newLeads.rows,
+    activeDeals: activeDeals.rows,
+    doluKoltuk: doluKoltuk.rows,
+    uyeOlanlar: uyeOlanlar.rows,
+    islevsiz: islevsiz.rows
+  };
+}

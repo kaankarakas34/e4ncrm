@@ -1,4 +1,6 @@
 import { getDashboardStats, getRecentUnassignedLeads } from './actions';
+import { cookies } from 'next/headers';
+import ExportAllDataButton from '@/components/ExportAllDataButton';
 
 export const dynamic = 'force-dynamic';
 import {
@@ -21,6 +23,14 @@ export default async function Dashboard() {
   const stats = await getDashboardStats();
   const unassignedLeads = await getRecentUnassignedLeads();
 
+  const cookieStore = await cookies();
+  const sessionStr = cookieStore.get('auth_session')?.value;
+  let user = null;
+  if (sessionStr) {
+    try { user = JSON.parse(sessionStr); } catch (e) {}
+  }
+  const isAdmin = user?.role === 'admin';
+
   return (
     <div className="fade-up">
       {/* Page Header */}
@@ -30,9 +40,7 @@ export default async function Dashboard() {
           <p className="page-subtitle">Genel operasyon ve lead dağılım durumu.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <button className="btn btn-ghost">
-            <TrendingUp size={15} /> Rapor Al
-          </button>
+          {isAdmin && <ExportAllDataButton />}
         </div>
       </div>
 
